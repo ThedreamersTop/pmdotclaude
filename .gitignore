@@ -1,0 +1,23 @@
+# Sensitive / auth backups
+backups/
+
+# Ephemeral session data
+debug/
+projects/
+shell-snapshots/
+session-env/
+plans/
+todos/
+cache/
+tasks/
+telemetry/
+downloads/
+file-history/
+
+# History & state
+history.jsonl
+
+# Auto-managed
+plugins/
+
+mcp-needs-auth-cache.json
