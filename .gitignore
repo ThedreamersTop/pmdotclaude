@@ -18,6 +18,6 @@ file-history/
 history.jsonl
 
 # Auto-managed
-# plugins/
+plugins/
 
 mcp-needs-auth-cache.json

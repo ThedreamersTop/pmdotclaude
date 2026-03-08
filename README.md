@@ -34,3 +34,7 @@ Scripts for orchestrating Claude Code in agentic/autonomous mode:
 
 - `pm_tools/scripts/run_cc_full_perm.sh` — Launch Claude with `--dangerously-skip-permissions`
 
+## plugins 
+
+- Plugins are not managed by this repo, we only put the recommended plugins and how to install them here instead. 
+- (empty) atm!
