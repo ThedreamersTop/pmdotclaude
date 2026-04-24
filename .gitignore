@@ -21,3 +21,4 @@ history.jsonl
 plugins/
 
 mcp-needs-auth-cache.json
+.devcontainer/
