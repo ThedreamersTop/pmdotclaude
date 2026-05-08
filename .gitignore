@@ -23,5 +23,6 @@ plugins/
 mcp-needs-auth-cache.json
 .devcontainer/
 *.lock
+sessions/
 
 
