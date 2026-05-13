@@ -19,6 +19,7 @@ history.jsonl
 
 # Auto-managed
 plugins/
+skills/library/
 
 mcp-needs-auth-cache.json
 .devcontainer/

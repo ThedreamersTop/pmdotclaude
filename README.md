@@ -6,7 +6,9 @@ A deployable **Claude Code configuration template** — clone this into any user
 
 | Path | Purpose |
 |---|---|
-| `commands/` | Custom slash commands (skills): plan, implement, feature, commit, review |
+| `commands/` | Custom slash commands: plan, implement, feature, commit, review |
+| `skills/` | Default Claude Code skills shipped with this template |
+| `skills/library/` | Ignored mount point for the private `pmAgentLib` skills library; populated by `pm_tools/scripts/install_pmAgentLib.sh` |
 | `settings.json` | Global Claude Code settings (full-autonomy mode by default) |
 | `plugins/` | Plugin registry — `superpowers` and marketplace configs |
 | `pm_tools/` | PM-side agentic engineering scripts and tools |
@@ -18,6 +20,21 @@ git clone git@github.com:kamisan118/pmdotclaude.git ~/.claude
 ```
 
 That's it. Open any project in Claude Code and all commands, settings, and tools are active.
+
+## Skills
+
+This repo carries two kinds of skills:
+
+- **Built-in skills** live directly under `skills/<name>/SKILL.md`, for example `prime`, `execute-handover`, `neat-freak`, and `skill-creator`.
+- **Private/library skills** live in a separate repo, `ThedreamersTop/pmAgentLib`, and are installed into `~/.claude/skills/library`.
+
+`skills/library/` is intentionally ignored by this repo. It should not contain committed files from `pmdotclaude`; it is a mount point for the separate private library repo. To install or refresh the private skill library, run:
+
+```bash
+pm_tools/scripts/install_pmAgentLib.sh
+```
+
+That keeps `~/.claude` / `pmdotclaude` and `~/.claude/skills/library` / `pmAgentLib` as two separate Git repositories, even though the latter is nested inside the deployed Claude config. See `skills/README.md` for the same note near the skills directory.
 
 ## Slash commands
 
