@@ -1,6 +1,6 @@
 ---
 name: pmskill-headless-fe-test
-description: Drive a frontend dev server with headless Puppeteer + system Chromium and save numbered screenshots of every UI interaction state into the project's `images/` folder. Use this skill whenever the user wants to take screenshots of the app, visually verify the frontend, capture UI states, screenshot before/after a button click, "play around with" or "interact with" the web page, smoke-test a React/Vue/Svelte/Next/Vite project headlessly, do visual regression captures, or drive the running site with Puppeteer/Playwright — even if they don't say "Puppeteer" explicitly. Trigger on phrases like "spin up the website and take screenshots", "screenshot the popup states", "interact with the app", "capture each state", "visual test the UI", "save screenshots of the page". Also trigger when the user reports the bundled Puppeteer Chrome crashing on an unexpected architecture (e.g. `rosetta error: failed to open elf at /lib64/ld-linux-x86-64.so.2`) — the preflight in this skill is the fix.
+description: Drive a frontend dev server with headless Puppeteer + system Chromium and save numbered screenshots of UI interaction states into `images/`. Use whenever the user wants to take screenshots of a web app, visually verify the frontend, capture before/after states, smoke-test a React/Vue/Svelte/Next/Vite project headlessly, "play around with" or "interact with" the page, or drive the running site with Puppeteer — even if they don't say "Puppeteer" explicitly. Also triggers on the `rosetta error: failed to open elf at /lib64/ld-linux-x86-64.so.2` symptom (wrong-arch bundled Chrome — the preflight here is the fix).
 ---
 
 # Headless Frontend Test & Screenshot
@@ -18,13 +18,13 @@ Don't use when: the user only wants unit/component tests (use Jest, Vitest, etc.
 Three rules. Skipping any of them is the difference between a reliable run and intermittent, hard-to-diagnose flake. The bundled `lib.js` enforces all three by construction — use it and you cannot violate them by accident.
 
 1. **Gate on DOM state, never on `sleep` for state changes.** When an action causes something to appear/disappear/update, wait for the matching `page.waitForSelector({ visible: true | hidden: true })` or `page.waitForFunction(...)`. Reserve `sleep` (≤500ms) strictly as padding for CSS transitions where there is no DOM signal — never as a proxy for "give the app a moment."
-   *Reason:* animations, async fetches, and React/Vue reconciliation all have unpredictable timing. A fixed sleep is a race condition you're paying for in dollars — intermittently it captures half-loaded frames, and the failure is silent (you get a PNG, just the wrong one). This is the single most common way these tests go wrong, and the only assertion that meaningfully discriminated this skill from a bare-Claude baseline in benchmarking.
+   *Reason:* animations, async fetches, and React/Vue reconciliation all have unpredictable timing. A fixed sleep is a race condition — intermittently it captures half-loaded frames, and the failure is silent (you get a PNG, just the wrong one). This is the single most common way these tests go wrong.
 
-2. **Always set `executablePath` to a system Chromium.** Use `executablePath: process.env.CHROME_BIN || '/usr/bin/chromium'` in `puppeteer.launch`. `lib.launch()` already does this. Never let Puppeteer fall back to its bundled cache without first verifying the cached binary's arch matches the host.
-   *Reason:* the cached Chrome under `~/.cache/puppeteer/` is frequently the wrong architecture (especially aarch64 containers where Puppeteer ships x86-64). Launching it fails with `rosetta error: failed to open elf at /lib64/ld-linux-x86-64.so.2` — confusing if you've never seen it.
+2. **Always set `executablePath` to a system Chromium.** Use `executablePath: process.env.CHROME_BIN || '/usr/bin/chromium'`. `lib.launch()` already does this.
+   *Reason:* the cached Chrome under `~/.cache/puppeteer/` is frequently the wrong architecture (especially aarch64 containers where Puppeteer ships x86-64). Launching it fails with `rosetta error: failed to open elf at /lib64/ld-linux-x86-64.so.2`.
 
-3. **Wire `pageerror` and `console.error` listeners on every page.** `lib.launch()` does this. Don't open a page without them.
-   *Reason:* without these, JS errors in the running app are invisible. The screenshot just "looks weird" and you have no signal as to why.
+3. **Wire `pageerror` and `console.error` listeners on every page.** `lib.launch()` does this.
+   *Reason:* without these, JS errors in the running app are invisible. The screenshot just "looks weird" with no signal as to why.
 
 ## Workflow
 
@@ -46,15 +46,15 @@ bash <path-to-skill>/scripts/preflight.sh
 
 The script reports `uname -m`, `file`-checks any cached Puppeteer Chrome, and if needed runs `sudo apt-get install -y chromium` on Debian/Ubuntu. On success it prints `CHROME_BIN=<path>` on stdout.
 
-If preflight fails (e.g., no apt, no sudo, non-Debian distro), tell the user explicitly: "I cannot launch a headless browser in this environment because <reason>." Do not silently fall back to an unrelated method.
+If preflight fails (no apt, no sudo, non-Debian distro), tell the user explicitly: "I cannot launch a headless browser in this environment because <reason>." Do not silently fall back to an unrelated method.
 
-Optional: if the app's UI uses emoji and you care about them rendering, `sudo apt-get install -y fonts-noto-color-emoji`. Otherwise emoji render as tofu boxes — page logic is unaffected.
+Optional: if the app's UI uses emoji and you care about them rendering, `sudo apt-get install -y fonts-noto-color-emoji`.
 
 ### 3. Write the interaction script
 
 The skill bundles two files in `assets/`:
 
-- **`lib.js`** — interaction helpers. Use them; they enforce the three non-negotiable patterns above. Copy this verbatim into the project root.
+- **`lib.js`** — interaction helpers. Enforces the three non-negotiable patterns by construction. Copy verbatim into the project root.
 - **`interact.template.js`** — a minimal driver script that calls `lib.js`. Copy to the project root as `interact.js`, then customize the interactions block.
 
 ```bash
@@ -64,20 +64,28 @@ cp <path-to-skill>/assets/interact.template.js <project-root>/interact.js
 
 Then customize `interact.js` for the app:
 
-1. Set `MOUNT_SELECTOR` to something the app actually renders (e.g., `#root > *` for most React apps, `#app > *` for Vue, a known component class like `.app-root`).
-2. Replace the example interactions with the real ones, picking the right helper for each:
-   - `shoot(page, name)` — capture current state without any action (e.g., initial render)
-   - `clickAndCapture(page, selector, name)` — click and capture; for state changes without a clear DOM signal (counter increment, hover effect)
-   - `openModalAndCapture(page, trigger, target, name)` — click a trigger, wait for `target` to become **visible**, capture
-   - `closeModalAndCapture(page, closeBtn, target, name)` — click a dismiss, wait for `target` to become **hidden**, capture
-   - `waitForAutoCloseAndCapture(page, target, name, { timeout })` — wait for `target` to disappear on its own (timers), capture
-   - `waitForStateAndCapture(page, predicate, name)` — wait for an arbitrary DOM predicate (e.g., counter value), capture
+1. Set `MOUNT_SELECTOR` to something the app actually renders (typical defaults: `#root > *` for React, `#app > *` for Vue, `#__next > *` for Next.js pages-router, or a project-specific root class). If unsure for the framework in front of you, read `references/frameworks.md`.
+
+2. Replace the example interactions using helpers from this `lib.js` API. You don't need to read the source of `lib.js` to use it — these signatures are everything:
+
+   | Helper | Signature | Use for |
+   |--------|-----------|---------|
+   | `launch(opts?)` | `→ { browser, page }` | Replaces `puppeteer.launch`; wires viewport + error listeners + `executablePath` to system Chromium |
+   | `goto(page, url, { mountSelector })` | `→ void` | Navigate + wait for framework mount |
+   | `shoot(page, name)` | `→ filepath` | Viewport screenshot to `images/<name>.png` |
+   | `clickAndCapture(page, sel, name, { pad? })` | `→ filepath` | Click + small CSS-transition pad + capture; use when the click changes state without a clear DOM signal (counter increment, hover) |
+   | `openModalAndCapture(page, trigger, target, name, { pad?, timeout? })` | `→ filepath` | Click trigger + wait `{ visible: true }` on `target` + capture |
+   | `closeModalAndCapture(page, closeBtn, target, name, { pad?, timeout? })` | `→ filepath` | Click dismiss + wait `{ hidden: true }` on `target` + capture |
+   | `waitForAutoCloseAndCapture(page, target, name, { timeout })` | `→ filepath` | Wait `{ hidden: true }` on `target` (for timer-driven dismissals) + capture; pass a `timeout` that comfortably exceeds the component's timer |
+   | `waitForStateAndCapture(page, predicateFn, name, { timeout? })` | `→ filepath` | Wait for arbitrary DOM predicate (e.g. `() => document.querySelector('.counter').textContent === '5'`) + capture |
+
+   Defaults: `pad = 200ms`, `timeout = 5000ms`. **Only read `lib.js`'s source if you hit an edge case that doesn't fit any of these helpers** — the table above is the API contract.
 
 Notes for filling in:
-- Number the screenshots so the sequence is obvious by filename (`01-`, `02-`, …). Future-you opening `images/` should be able to reconstruct the story.
+- Number screenshot names so the sequence is obvious (`01-`, `02-`, …). Future-you opening `images/` should be able to reconstruct the story from filenames.
 - Prefer `data-testid` attributes if the project uses them; otherwise unique class names; otherwise text content via `page.locator('text=...').click()`. Don't target by tag name alone.
-- For elements that animate in: use `openModalAndCapture` (waits for `{ visible: true }`). For elements that animate out: use `closeModalAndCapture` or `waitForAutoCloseAndCapture` (waits for `{ hidden: true }`). For auto-close, set a `timeout` that comfortably exceeds the component's timer.
-- If a flow doesn't fit the helpers, drop down to raw Puppeteer via `page.evaluate`, `page.click`, etc., but keep applying rule 1 (wait for DOM state, not sleep).
+- For elements that animate in: use `openModalAndCapture` (`{ visible: true }`). For elements that animate out: use `closeModalAndCapture` or `waitForAutoCloseAndCapture` (`{ hidden: true }`).
+- If a flow doesn't fit the helpers, drop down to raw Puppeteer via `page.click`, `page.evaluate`, etc., but keep applying rule 1 (wait for DOM state, not sleep).
 
 ### 4. Run
 
@@ -108,10 +116,7 @@ After the script finishes:
 2. **Open at least 2–3 PNGs with `Read`** — typically the initial state, a mid-flow state, and the final state. Visually confirm they show what the script intended. Filenames lie; pixels don't.
 3. Skim the script's stdout for `pageerror:` or `console.error:` lines. Real bugs in the running app show up here first.
 
-If any screenshot looks wrong:
-- Blank or unstyled → bundle didn't load. Check `MOUNT_SELECTOR` actually exists in the rendered app.
-- Cut-off animation → bump the `pad` option on the relevant helper (`openModalAndCapture(page, ..., name, { pad: 400 })`).
-- Wrong state captured → selector matched the wrong element. Re-read the JSX/HTML.
+If anything looks wrong or a step failed, read `references/troubleshooting.md` — it has a symptom → cause → fix table for every common failure mode.
 
 ### 6. Report back
 
@@ -119,18 +124,8 @@ End with a short table mapping numbered screenshots → states they show, plus a
 
 ## Bundled assets
 
-- `assets/lib.js` — interaction helpers. Enforces DOM-gating, system Chromium, error listeners by construction. Copy verbatim into the project. **Always use it unless an edge case truly doesn't fit.**
-- `assets/interact.template.js` — minimal driver template using `lib.js`. Copy to the project root as `interact.js` and customize the interactions block.
-- `scripts/preflight.sh` — environment detection + remediation for arch mismatches and missing system Chromium. Invoke once per environment.
-
-## Common failure modes and remedies
-
-| Symptom | Likely cause | Fix |
-|---------|--------------|-----|
-| `rosetta error: failed to open elf at /lib64/ld-linux-x86-64.so.2` | Cached Chrome is x86_64, host is aarch64 | Run preflight; install system chromium; rely on `lib.launch()` defaults |
-| `Failed to launch browser process` with no further detail | Missing sandbox capabilities in container | The `--no-sandbox` flags in `lib.launch()` should cover this |
-| Screenshot is fully blank | Captured before mount, or bundle 404 | Verify `MOUNT_SELECTOR` exists in the page DOM; check the script's `pageerror` logs |
-| Screenshot shows half-animated popup | Captured during CSS transition | Bump `{ pad: <ms> }` on the helper, or wait on a more specific selector |
-| Counter/state value wrong in screenshot | Click fired before React rehydration, or selector hit the wrong button | Use `data-testid` if available; check `console.error` for hydration warnings |
-| Emoji render as missing-glyph boxes | No emoji font installed | `sudo apt-get install -y fonts-noto-color-emoji` (optional; cosmetic only) |
-| `waitForSelector` times out on `{ hidden: true }` for auto-close | Timer is longer than your timeout | Read the component, find the `setTimeout` duration, set `{ timeout: that + buffer }` |
+- `assets/lib.js` — interaction helpers. Always use it; the API table above is sufficient to drive it without reading the source.
+- `assets/interact.template.js` — minimal driver template using `lib.js`. Copy to project root as `interact.js` and customize.
+- `scripts/preflight.sh` — environment detection + remediation for arch mismatches and missing system Chromium.
+- `references/troubleshooting.md` — symptom → cause → fix table. Read only when something fails.
+- `references/frameworks.md` — mount-selector cheat-sheet per framework. Read only when uncertain.
