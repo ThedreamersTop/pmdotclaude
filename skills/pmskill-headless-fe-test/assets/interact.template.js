@@ -1,87 +1,55 @@
-// interact.js — pmskill-headless-fe-test driver template
+// interact.template.js — copy to project root alongside lib.js, then
+// customize the interactions block for the app under test.
 //
-// Copy this to the project root, then:
-//   1. Set URL to your dev server's address.
-//   2. Replace the example interactions in main() with the real ones for your app.
-//   3. Gate each screenshot on a real DOM signal (waitForSelector) — not a fixed sleep.
-//
-// Run with `node interact.js` while the dev server is up.
+// The helpers in lib.js enforce the three non-negotiable patterns
+// (DOM-gating, system Chromium, error listeners) by construction, so this
+// file stays small and focused on the per-app interaction sequence.
 
-const puppeteer = require('puppeteer');
-const path = require('path');
-const fs = require('fs');
+const lib = require('./lib.js');
 
-const URL = 'http://localhost:3000';
-const OUT_DIR = path.join(__dirname, 'images');
-const VIEWPORT = { width: 1200, height: 800 };
+const URL = process.env.APP_URL || 'http://localhost:3000';
+// Mount selector that proves the framework has rendered. Pick something
+// the app actually outputs — e.g., '#root > *' for React, '#app > *' for Vue,
+// a top-level class like '.app-root' or a known component selector.
+const MOUNT_SELECTOR = '.app-root';
 
-async function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function shoot(page, name) {
-  const file = path.join(OUT_DIR, `${name}.png`);
-  await page.screenshot({ path: file, fullPage: false });
-  console.log(`saved ${name}.png`);
-}
-
-async function main() {
-  if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
-
-  const browser = await puppeteer.launch({
-    headless: true,
-    // Use system Chromium where it exists — Puppeteer's bundled Chrome is often the
-    // wrong architecture on ARM hosts. See the skill's environment preflight.
-    executablePath: process.env.CHROME_BIN || '/usr/bin/chromium',
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu'],
-  });
-
+(async () => {
+  const { browser, page } = await lib.launch();
   try {
-    const page = await browser.newPage();
-    await page.setViewport(VIEWPORT);
+    await lib.goto(page, URL, { mountSelector: MOUNT_SELECTOR });
 
-    // Surface page-side failures. Without these, JS errors are silent.
-    page.on('pageerror', (err) => console.error('pageerror:', err.message));
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') console.error('console.error:', msg.text());
-    });
+    // ===== INTERACTIONS — customize from here =====
 
-    await page.goto(URL, { waitUntil: 'networkidle0', timeout: 30000 });
-    // Wait for *something the app rendered* — proves React/Vue/etc has mounted,
-    // not just that the bundle has loaded.
-    await page.waitForSelector('body'); // <-- replace with a real app-specific selector
+    await lib.shoot(page, '01-initial');
 
-    // ===== BEGIN PROJECT-SPECIFIC INTERACTIONS ============================
-    //
-    // Replace this block with your app's interactions. Pattern:
-    //
-    //   1. await shoot(page, 'NN-state-name') — capture initial / current state
-    //   2. await page.click('selector')        — drive an interaction
-    //   3. await page.waitForSelector(...)     — gate on real DOM change
-    //   4. (optional) await sleep(150)         — padding for CSS transitions
-    //   5. await shoot(page, 'NN+1-next-state')
-    //
-    // Number filenames in interaction order so the sequence is obvious from a
-    // directory listing.
+    // Click and capture (the click result has no DOM signal that's easy to
+    // wait on — e.g., a counter increment is just a text change). The small
+    // default pad covers any CSS transition on the click.
+    // await lib.clickAndCapture(page, '[data-testid="primary-cta"]', '02-after-cta');
 
-    await shoot(page, '01-initial');
+    // Open a modal: clicks the trigger, waits for the modal to be visible.
+    // await lib.openModalAndCapture(page, '[data-testid="open-modal"]',
+    //                                '.modal-overlay', '03-modal-open');
 
-    // Example: clicking a button and capturing the result.
-    //   await page.click('button.primary');
-    //   await sleep(150); // CSS transition padding
-    //   await shoot(page, '02-after-click');
+    // Close a modal: clicks the close control, waits for the modal to be hidden.
+    // await lib.closeModalAndCapture(page, '[data-testid="modal-close"]',
+    //                                 '.modal-overlay', '04-modal-closed');
 
-    // Example: opening a modal, capturing it, closing it.
-    //   await page.click('button.open-modal');
-    //   await page.waitForSelector('.modal', { visible: true });
-    //   await sleep(200);
-    //   await shoot(page, '03-modal-open');
-    //
-    //   await page.click('button.close-modal');
-    //   await page.waitForSelector('.modal', { hidden: true, timeout: 5000 });
-    //   await shoot(page, '04-modal-closed');
+    // Auto-close (timer-driven dismiss). Timeout should exceed the component's
+    // auto-close duration with a small buffer.
+    // await lib.openModalAndCapture(page, '[data-testid="toast-trigger"]',
+    //                                '.toast', '05-toast-shown');
+    // await lib.waitForAutoCloseAndCapture(page, '.toast', '06-toast-auto-closed',
+    //                                       { timeout: 5000 });
 
-    // ===== END PROJECT-SPECIFIC INTERACTIONS ==============================
+    // State-based wait (no element appears/disappears; just a DOM value
+    // changes). Useful for counters reaching a known value, content load
+    // completion flags, etc.
+    // await lib.waitForStateAndCapture(page,
+    //   () => document.querySelector('.counter').textContent === '5',
+    //   '07-counter-five');
+
+    // ===== END INTERACTIONS =====
 
     console.log('done');
   } catch (err) {
@@ -90,6 +58,4 @@ async function main() {
   } finally {
     await browser.close();
   }
-}
-
-main();
+})();
