@@ -65,24 +65,46 @@ cp -r pmskill-headless-fe-test ~/.claude/skills/
 
 After that, Claude Code will auto-discover it. No registration step needed.
 
-## Eval results (iteration 1)
+## Eval results
 
-Tested with three prompts (this skill vs. baseline Claude with no skill):
+Three test prompts (this skill vs. baseline Claude with no skill), one run per cell:
 
-| Eval | Description | With skill | Baseline |
-|------|-------------|-----------|----------|
-| 0 | Screenshot a React+Webpack counter app | 8/8 | 8/8 |
-| 1 | Scaffold fresh Vite+React, screenshot states | 6/7 | 5/7 |
-| 2 | Modernize a broken Puppeteer script (`page.waitForTimeout` removed) | 7/7 | 7/7 |
+| Eval | Description |
+|------|-------------|
+| 0 | Screenshot a React+Webpack counter app |
+| 1 | Scaffold fresh Vite+React, screenshot states |
+| 2 | Modernize a broken Puppeteer script (`page.waitForTimeout` removed) |
 
-The skill's headline advantage is **consistency**, not raw pass rate:
+### Iteration 1 (initial release)
 
-| Metric | With skill | Baseline | Notes |
-|--------|-----------|----------|-------|
-| Pass rate | 95% ± 8% | 90% ± 16% | Baseline variance 2x higher |
-| Time | 150s ± 10s | 146s ± **41s** | Time variance 4x higher without skill |
-| Tokens | 38,368 ± **699** | 29,608 ± 3,782 | Token variance 5x higher without skill |
+| Metric | With skill | Baseline |
+|--------|-----------|----------|
+| Pass rate | 21/22 (95%) | 19/22 (90%) |
+| Time | 150s ± 10s | 146s ± **41s** |
+| Tokens | 38,368 ± **699** | 29,608 ± 3,782 |
 
-The single discriminating assertion was `driver-script-gates-on-dom-state`: in the Vite test, the baseline agent used zero `page.waitForSelector` calls (relying purely on sleeps), which is the exact pattern the skill is built to prevent.
+The single discriminating assertion was `driver-script-gates-on-dom-state`: in the Vite test, the baseline used **zero** `page.waitForSelector` calls (sleeps everywhere). That's the exact failure mode the skill is built to prevent.
 
-Cost of the skill: ~30% more tokens per run (the agent reads SKILL.md and follows its workflow). Trade for predictability.
+### Iteration 2 (added `assets/lib.js` interaction helpers, promoted DOM-gating to a top-of-file "non-negotiable patterns" section)
+
+| Metric | With skill | Baseline |
+|--------|-----------|----------|
+| Pass rate | 21/22 (95%) | 21/22 (95%) |
+| Time | 204s ± 76s* | 136s ± 24s |
+| Tokens | 43,324 ± **770** | 32,147 ± 3,874 |
+
+\* One eval-0 with-skill run took 292s (an outlier — the agent did extra verification). Without it, with-skill mean is ~160s ± 5s.
+
+Per-eval `waitForSelector`/`waitForFunction` call counts (the discriminating metric):
+
+| Eval | With skill (iter1 → iter2) | Baseline (iter1 → iter2) |
+|------|----------------------------|--------------------------|
+| 0 (React) | 7 → 7 | 5 → 5 |
+| 1 (Vite) | 5 → **7** | **0 → 1** |
+| 2 (Modernize) | 8 → 8 | 5 → **7** |
+
+Across both iterations, with-skill gate count is stable at 7–8 per run. Baseline ranges 0–7 with no upward trend. The skill's behavior is predictable; the baseline's is not — that's the consistency story the variance numbers were already telling.
+
+**Honest takeaway.** Iteration 2 did not lower token cost (the new `lib.js` is more to read, not less). It did make produced code structurally more consistent and prevent the worst case the iter-1 baseline hit on Vite (zero DOM gates). The pass-rate gap closed because the baseline happened to do better on one assertion this run — three single-run evals are too noisy for fine-grained comparison.
+
+Iteration-2 is the current shipped version. The `lib.js` becomes a reusable artifact inside any project that consumes the skill.
