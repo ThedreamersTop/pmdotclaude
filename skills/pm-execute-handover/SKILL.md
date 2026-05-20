@@ -1,5 +1,5 @@
 ---
-name: execute-handover
+name: pm-execute-handover
 description: >
   Use this skill whenever you (a Claude Code agent) are pointed at a project
   that contains a CLAUDE.md at the root and asked to implement, execute, build,

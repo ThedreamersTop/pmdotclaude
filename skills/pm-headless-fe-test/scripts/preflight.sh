@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# preflight.sh — pmskill-headless-fe-test
+# preflight.sh — pm-headless-fe-test
 #
 # Ensures a runnable Chromium exists for Puppeteer to launch.
 #

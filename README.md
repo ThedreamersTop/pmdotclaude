@@ -25,7 +25,7 @@ That's it. Open any project in Claude Code and all commands, settings, and tools
 
 This repo carries two kinds of skills:
 
-- **Built-in skills** live directly under `skills/<name>/SKILL.md`, for example `prime`, `execute-handover`, `neat-freak`, and `skill-creator`.
+- **Built-in skills** live directly under `skills/<name>/SKILL.md`, for example `prime`, `pm-execute-handover`, `pm-headless-fe-test`, `neat-freak`, and `skill-creator`.
 - **Private/library skills** live in a separate repo, `ThedreamersTop/pmAgentLib`, and are installed into `~/.claude/skills/library`.
 
 `skills/library/` is intentionally ignored by this repo. It should not contain committed files from `pmdotclaude`; it is a mount point for the separate private library repo. To install or refresh the private skill library, run:

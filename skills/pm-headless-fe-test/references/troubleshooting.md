@@ -1,4 +1,4 @@
-# Troubleshooting — `pmskill-headless-fe-test`
+# Troubleshooting — `pm-headless-fe-test`
 
 Read this only if a screenshot looks wrong, a launch fails, or you see an unexpected error during the workflow. Most successful runs never need it.
 

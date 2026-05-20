@@ -1,5 +1,5 @@
 ---
-name: pmskill-headless-fe-test
+name: pm-headless-fe-test
 description: Drive a frontend dev server with headless Puppeteer + system Chromium and save numbered screenshots of UI interaction states into `images/`. Use whenever the user wants to take screenshots of a web app, visually verify the frontend, capture before/after states, smoke-test a React/Vue/Svelte/Next/Vite project headlessly, "play around with" or "interact with" the page, or drive the running site with Puppeteer — even if they don't say "Puppeteer" explicitly. Also triggers on the `rosetta error: failed to open elf at /lib64/ld-linux-x86-64.so.2` symptom (wrong-arch bundled Chrome — the preflight here is the fix).
 ---
 

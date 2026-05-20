@@ -1,4 +1,4 @@
-# pmskill-headless-fe-test
+# pm-headless-fe-test
 
 A Claude Code skill for **headless visual verification of frontend projects**: it drives a project's running dev server in headless Chromium via Puppeteer and saves numbered screenshots of every interaction state into the project's `images/` folder. Works on React, Vue, Svelte, Next, Vite, or anything that serves HTML on localhost.
 
@@ -24,7 +24,7 @@ That error means the Puppeteer-bundled Chrome is the wrong architecture. The ski
 ## What's in the directory
 
 ```
-pmskill-headless-fe-test/
+pm-headless-fe-test/
 ├── SKILL.md                    The instructions Claude reads when the skill triggers
 ├── README.md                   This file (human orientation)
 ├── assets/
@@ -57,10 +57,10 @@ The skill enforces a workflow that addresses all three.
 
 ## Installing this skill
 
-Copy or symlink the `pmskill-headless-fe-test/` directory into `~/.claude/skills/`:
+Copy or symlink the `pm-headless-fe-test/` directory into `~/.claude/skills/`:
 
 ```bash
-cp -r pmskill-headless-fe-test ~/.claude/skills/
+cp -r pm-headless-fe-test ~/.claude/skills/
 ```
 
 After that, Claude Code will auto-discover it. No registration step needed.
