@@ -90,21 +90,36 @@ The single discriminating assertion was `driver-script-gates-on-dom-state`: in t
 | Metric | With skill | Baseline |
 |--------|-----------|----------|
 | Pass rate | 21/22 (95%) | 21/22 (95%) |
-| Time | 204s ± 76s* | 136s ± 24s |
+| Time | 204s ± 76s\* | 136s ± 24s |
 | Tokens | 43,324 ± **770** | 32,147 ± 3,874 |
 
-\* One eval-0 with-skill run took 292s (an outlier — the agent did extra verification). Without it, with-skill mean is ~160s ± 5s.
+\* One eval-0 with-skill run took 292s (an outlier — the agent did extra verification).
 
-Per-eval `waitForSelector`/`waitForFunction` call counts (the discriminating metric):
+Iteration 2 added the `lib.js` artifact but **raised** with-skill token cost by ~5k because SKILL.md's workflow directed the agent to `Read` `lib.js` to learn its API.
 
-| Eval | With skill (iter1 → iter2) | Baseline (iter1 → iter2) |
-|------|----------------------------|--------------------------|
-| 0 (React) | 7 → 7 | 5 → 5 |
-| 1 (Vite) | 5 → **7** | **0 → 1** |
-| 2 (Modernize) | 8 → 8 | 5 → **7** |
+### Iteration 3 (lazy-load: inline lib.js API + references/ pattern + trimmed description)
 
-Across both iterations, with-skill gate count is stable at 7–8 per run. Baseline ranges 0–7 with no upward trend. The skill's behavior is predictable; the baseline's is not — that's the consistency story the variance numbers were already telling.
+| Metric | With skill | Baseline |
+|--------|-----------|----------|
+| Pass rate | 21/22 (95%) | 21/22 (95%) |
+| Time | **138s** ± 13s | 142s ± 47s |
+| Tokens | **39,698** ± 2,010 | 31,401 ± 5,354 |
 
-**Honest takeaway.** Iteration 2 did not lower token cost (the new `lib.js` is more to read, not less). It did make produced code structurally more consistent and prevent the worst case the iter-1 baseline hit on Vite (zero DOM gates). The pass-rate gap closed because the baseline happened to do better on one assertion this run — three single-run evals are too noisy for fine-grained comparison.
+What changed:
+- Inline `lib.js` API table directly in SKILL.md §3 — the agent has the full helper API in-context and no longer needs to `Read` the file's source. Source-reading is now opt-in for edge cases.
+- Failure-mode table moved to `references/troubleshooting.md` (read only on failure).
+- Framework mount-selector cheat-sheet moved to `references/frameworks.md` (read only when uncertain).
+- YAML `description:` trimmed 145 → 91 words (every Claude Code session pays this cost).
+- `lib.js` inline doc comments slimmed (signatures and usage now live in SKILL.md table; `lib.js` keeps only *why* rationale).
 
-Iteration-2 is the current shipped version. The `lib.js` becomes a reusable artifact inside any project that consumes the skill.
+Cross-iteration recap of with-skill cost and gate quality:
+
+| Iter | Pass | Tokens (mean ± stddev) | Time (mean ± stddev) | Gates per run (mean / range) |
+|------|------|------------------------|----------------------|------------------------------|
+| 1 | 21/22 | 38,368 ± 699 | 150s ± 10s | 6.7 (5–8) |
+| 2 | 21/22 | 43,324 ± 770 | 204s ± 76s | 7.3 (7–8) |
+| 3 | 21/22 | **39,698 ± 2,010** | **138s ± 13s** | 5.7 (5–6) |
+
+**Verdict:** iteration 3 recovered ~70% of the iter-1 → iter-2 cost increase (back to within +3.5% of iter-1's token mean) while keeping the `lib.js` artifact and the structural improvements. Wall-clock dropped 32% vs iter-2. Pass rate held at 21/22 across all three iterations. Gate count dipped slightly (5.7 vs iter-2's 7.3) — the agent now relies more on the API table than full lib.js reading — but the minimum was 5 gates per run, comfortably above the without-skill mean of 4.0 and well above the assertion's ≥1 threshold.
+
+Iteration-3 is the current shipped version.
