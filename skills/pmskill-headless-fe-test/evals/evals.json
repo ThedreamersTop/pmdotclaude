@@ -1,0 +1,26 @@
+{
+  "skill_name": "pmskill-headless-fe-test",
+  "evals": [
+    {
+      "id": 0,
+      "name": "react-app-interaction",
+      "prompt": "Can you spin up the React website in this repo and play around with it? Save screenshots of each interaction state to the images/ folder.",
+      "expected_output": "A sequence of 4+ numbered PNG screenshots in images/ showing distinct states: initial render, after counter clicks, popup open, popup closed. Plus a Node script driving the interactions.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "vite-fresh-scaffold",
+      "prompt": "Scaffold a fresh Vite + React project (use the react template), start its dev server, click around the default landing page, and save screenshots of each interaction state to images/.",
+      "expected_output": "A working Vite+React project, plus 3+ numbered PNG screenshots showing distinct interaction states (e.g., initial, after counter click, etc.).",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "modernize-broken-puppeteer",
+      "prompt": "I copy-pasted this puppeteer snippet from an old tutorial but it crashes because page.waitForTimeout doesn't exist in modern Puppeteer:\n```js\nconst puppeteer = require('puppeteer');\n(async () => {\n  const browser = await puppeteer.launch({ headless: true });\n  const page = await browser.newPage();\n  await page.goto('http://localhost:3001');\n  await page.waitForTimeout(2000);\n  await page.screenshot({ path: 'images/screen.png' });\n  await browser.close();\n})();\n```\nCan you rewrite a working version that captures screenshots of every interaction state of this React app, and run it?",
+      "expected_output": "A rewritten Node script using modern Puppeteer APIs (no waitForTimeout), plus a sequence of numbered PNG screenshots of distinct interaction states.",
+      "files": []
+    }
+  ]
+}
